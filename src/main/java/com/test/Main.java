@@ -1,38 +1,49 @@
 package com.test;
 
-import com.test.entity.User;
+import com.test.entity.*;
+import com.test.util.HibernateUtil;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy;
-import org.hibernate.cfg.Configuration;
+import org.hibernate.Transaction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.time.LocalDate;
 
 public class Main {
+    private static final Logger log = LoggerFactory.getLogger(Main.class);
+
     public static void main(String[] args) {
+        Company company = Company.builder()
+                .name("Google")
+                .build();
+        User user = User.builder()
+                .username("jack111@gmail.com")
+                .personalInfo(PersonalInfo.builder()
+                        .firstName("Jack")
+                        .lastName("Smith")
+                        .birthDate(new Birthday(LocalDate.of(1990, 1, 1)))
+                        .build())
+                .company(company)
+                .build();
 
-        Configuration cfg = new Configuration();
-//        cfg.setPhysicalNamingStrategy(new CamelCaseToUnderscoresNamingStrategy());
-//        cfg.addClass(User.class);
-        cfg.configure();
+        try (SessionFactory sessionFactory = HibernateUtil.buildSessionFactory();
+             ) {
+            try (Session session1 = sessionFactory.openSession()) {
+                session1.beginTransaction(); // open session
 
-        try (SessionFactory sessionFactory = cfg.buildSessionFactory();
-        Session session = sessionFactory.openSession()) {
-            session.beginTransaction();
+                session1.persist(user);
 
-            User user = User.builder()
-                    .username("admin@admin.com")
-                    .firstName("admin")
-                    .lastName("admin")
-                    .birthDate(LocalDate.of(20000, 10, 10))
-                    .age(20)
-                    .build();
+                session1.getTransaction().commit(); // closing session
+            }
+            try (Session session2 = sessionFactory.openSession()) {
+                session2.beginTransaction();
 
-            session.persist(user);
 
-            session.getTransaction().commit();
+                session2.getTransaction().commit();
+            }
+
+            log.info("Successfully persisted user");
             System.out.println("OK");
         }
     }

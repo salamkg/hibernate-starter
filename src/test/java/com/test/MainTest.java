@@ -1,11 +1,18 @@
 package com.test;
 
+import com.test.entity.Birthday;
+import com.test.entity.Company;
 import com.test.entity.User;
+import com.test.util.HibernateUtil;
 import jakarta.persistence.Column;
 import jakarta.persistence.Table;
+import lombok.Cleanup;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Optional;
@@ -14,14 +21,21 @@ import java.util.stream.Collectors;
 class MainTest {
 
     @Test
-    void chechReflectionApi() {
-        User user = User.builder()
-                .username("admin@admin.com")
-                .firstName("admin")
-                .lastName("admin")
-                .birthDate(LocalDate.of(20000, 10, 10))
-                .age(20)
-                .build();
+    void oneToMany() {
+        @Cleanup var sessionFactory = HibernateUtil.buildSessionFactory();
+        @Cleanup var session = sessionFactory.openSession();
+
+        session.beginTransaction();
+
+        var company = session.get(Company.class, 2);
+        System.out.println(company);
+
+        session.getTransaction().commit();
+    }
+
+    @Test
+    void chechReflectionApi() throws SQLException, IllegalAccessException {
+        User user = User.builder().build();
         String sql = """
                 insert into %s (%s)
                 values (%s)
@@ -43,5 +57,12 @@ class MainTest {
                 .collect(Collectors.joining(", "));
 
         System.out.println(sql.formatted(tableName, columnNames, columnValues));
+
+        Connection connection = null;
+        PreparedStatement preparedStatement = connection.prepareStatement(sql.formatted(tableName, columnNames, columnValues));
+        for (Field field : declaredFields) {
+            field.setAccessible(true);
+            preparedStatement.setObject(1, field.get(user));
+        }
     }
 }

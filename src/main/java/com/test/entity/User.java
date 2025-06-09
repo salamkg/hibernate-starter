@@ -1,29 +1,38 @@
 package com.test.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
-import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Entity
+//@ToString(exclude = "company")
 @Table(name = "h_users")
 public class User {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @AttributeOverride(name = "birthDate", column = @Column(name = "birth_date"))
+    private PersonalInfo personalInfo;
+
+    @Column(unique = true, nullable = false)
     private String username;
-    private String firstName;
-    private String lastName;
-    @Column(name = "birth_date")
-    private LocalDate birthDate;
-    private Integer age;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "info", columnDefinition = "jsonb")
+    private String info;
+
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
+    @ManyToOne(fetch = FetchType.EAGER, cascade = {CascadeType.DETACH, CascadeType.PERSIST}) // Uni-directional mapping
+    @JoinColumn(name = "company_id")
+    private Company company;
 }
